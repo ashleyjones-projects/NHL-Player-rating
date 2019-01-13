@@ -18,3 +18,30 @@ xGF%: The ratio of Expected goals for versus Expected goals against. Expected go
 
 DPS: Defensive Point Shares. One of three metrics devised by Hockeyreference.com (others being Offensive Points Shares and Goalie Point Shares) that allocates a score to each point scored by a player using the concept of marginal goals for and marginal goals against. Acquiring DPS is harder than for OPS, hence defensive forwards and D-men have higher DPS than most offensive forwards. The link is given for more information
 
+The algorithm explained:
+
+There are 8 overall parameters which are stacked together and passed through a Sigmoid function to yield probability values between 0 and 100 (or 0 and 1 and multiplied out by 100). Each parameter has its own weight of importance. How these are chosen is arbitary, but I feel they do a fairly good job of producing an overall rating that compares well to the EA sports ratings. This analysis can be found in the player_rating.ipynb. 
+
+So the algorithm
+
+rate = is the projected scaling factor a player has if he didn't appear in 82 games. This number is >= 1.0. To account for players missing games, this factors when applied puts all players on the same level as if they had played 82 games.
+
+blk and hit: are the projected number of block shots and hits a player makes through 82 games
+
+gwy, pen, and fo: are the projected differential of "takeaways minus giveaways", "Penalties drawn minus penalties taken", and "Faceoffs won minus faceoffs lost", respectively
+
+toi: is the average time on ice. This value is squared to give more weight to players who play long minutes. Seperates the best from the average. This is the "stamina" parameter
+
+defn: This is the "responsability" parameter. Perhaps the most complex to explain. It uses CFQoC and multiplies this value by adjusted OZS (see below for description). It is a ratio. This numerator value provides an idea of the situation on average aplyer was in. Was he playing against tougher or easier opponents? and which zone was he most likely to face those opponents The larger this number the harder the opponent and more defenseive responsability they had. It is still possible to score high if started alot in the offensive zone, but the CFQoC would have to be a magnitude of two larger compared to the defensive zone players, which is rarely the case. The denominator is simply a scaling factor. This combined value is then multiplied by the CF% and xGF% to account for how well those players did given the situation they were in. For example, players who play hard defensive minutes but have CF% > 50% are doing well. Think Patrice Bergeron, Pavel Datsyuk, Henrik Zetterberg. These guys have high scores here!
+
+ozs_adj = OZS on average has a league-value of 50% (see player_rating.ipynb). However, this doesn't take into account individual teams. Take the LA Kings, who had a Team average of 54.4%. This is larger than 50% and means they were a puck possession team. Perhaps the most defensive player on the team has a OZS of 50%. If we were to run this through defn without adjusting, this player would not be rated correctly as his team value is biased to the league average. We would need to remove 4% off all players on the Kings team for it to balanced. Essentially, teams that defend well have better puck possession and keep the puck in the opponents zone, but without adjusting for it, we would be ignoring that fact.
+
+pts: Is the "productivity" parameter. This parameter carries in general the most weight. This is a weighted combination. Firstly projected points through 82 games are divided by the PDO to remove the luck bias and put everyone on an even-keel. the second metric concerns DPS which rewards players that have contributed from the defensive stand-point. The weights chosen are arbitary, but the overall impact of DPS is small compared to the overall points metric.
+
+GSS_adj: linear stacking of the above variables
+
+On average, productivity accounts for about 50%, responsability about 35%, stamina about 7%, and the remaining 8% is everything else of GSS_adj. See the plots in the player_rating.ipynb
+
+The ratings provided are a three year weighted average of individual yearly ratings over the last three years (2016, 2017,2018), such that a player that has played all three years has their individual yearly ratings weight-distributed as 50%, 30%, and 20%, for the previous year, 2 years ago, 3 years ago, respectively. Only players with 10 or more games in a given season are rated. You can find the player ratings in 2018.csv
+
+
